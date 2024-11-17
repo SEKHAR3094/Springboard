@@ -6,8 +6,8 @@ import numpy as np
 import os
 
 # Path to the YOLOv5 repository and model
-repo_path = '/mnt/src/springboard/yolov5'  # Adjust to your YOLOv5 repo location
-model_path = '/mnt/src/springboard/Streamlit/best.pt'  # Adjust to the path where best.pt is located in the repo
+repo_path = '/mnt/src/Springboard/yolov5'  # Adjust to your YOLOv5 repo location
+model_path = '/mnt/src/Springboard/best.pt'  # Adjust to the path where best.pt is located in the repo
 
 # Load the YOLOv5 model
 @st.cache_resource
