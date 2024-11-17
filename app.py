@@ -11,7 +11,7 @@ repo_path = './yolov5'  # Path to the yolov5 folder
 model_path = './yolov5/best.pt'  # Path to the best.pt model inside yolov5 folder
 
 # Load the YOLOv5 model
-model = torch.hub.load(repo_path, 'custom', path=model_path, source='local')
+model = torch.load(model_path)  # Load model directly
 
 # Streamlit app UI
 st.title('Tennis Player Detection App')
@@ -37,7 +37,7 @@ if uploaded_video is not None:
             break
 
         # Perform detection
-        results = model(frame)
+        results = model(frame)  # Use model for detection
         frame = np.squeeze(results.render())  # Draw the detection boxes on the frame
 
         # Convert BGR to RGB for display
