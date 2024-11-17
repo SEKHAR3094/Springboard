@@ -1,5 +1,11 @@
-import streamlit as st
+import sys
+import os
+
+# Add yolov5 directory to the Python path
+sys.path.append(os.path.join(os.getcwd(), 'yolov5'))
+
 import torch
+import streamlit as st
 import cv2
 import tempfile
 import numpy as np
@@ -11,7 +17,6 @@ repo_path = './yolov5'  # Path to the yolov5 folder
 model_path = './yolov5/best.pt'  # Path to the best.pt model inside yolov5 folder
 
 # Load the YOLOv5 model using YOLOv5's custom load method
-# Ensure that the yolov5 directory contains the appropriate modules (models, utils, etc.)
 from yolov5 import load  # Import load function from yolov5
 model = load(model_path)  # Load model with YOLOv5's method
 
