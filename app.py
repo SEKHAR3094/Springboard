@@ -10,8 +10,10 @@ import time
 repo_path = './yolov5'  # Path to the yolov5 folder
 model_path = './yolov5/best.pt'  # Path to the best.pt model inside yolov5 folder
 
-# Load the YOLOv5 model
-model = torch.load(model_path)  # Load model directly
+# Load the YOLOv5 model using YOLOv5's custom load method
+# Ensure that the yolov5 directory contains the appropriate modules (models, utils, etc.)
+from yolov5 import load  # Import load function from yolov5
+model = load(model_path)  # Load model with YOLOv5's method
 
 # Streamlit app UI
 st.title('Tennis Player Detection App')
