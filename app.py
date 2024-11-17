@@ -5,16 +5,15 @@ import tempfile
 import numpy as np
 import os
 
-# Path to the YOLOv5 repository and model
-repo_path = '/mnt/src/Springboard/yolov5'  # Adjust to your YOLOv5 repo location
-model_path = '/mnt/src/Springboard/best.pt'  # Adjust to the path where best.pt is located in the repo
+# Path to the YOLOv5 model
+model_path = 'best.pt'
 
 # Load the YOLOv5 model
 @st.cache_resource
-def load_model(repo_path, model_path):
-    return torch.hub.load(repo_path, 'custom', path=model_path, source='local')
+def load_model(model_path):
+    return torch.hub.load('.', 'custom', path=model_path, source='local')
 
-model = load_model(repo_path, model_path)
+model = load_model(model_path)
 
 # Main app interface
 st.title("🎾 Tennis Tracking App")
