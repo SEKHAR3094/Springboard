@@ -5,80 +5,53 @@ import tempfile
 import numpy as np
 import os
 
-# Path to the YOLOv5 repository and model
-repo_path = '/mnt/src/Springboard/yolov5'  # Adjust to your YOLOv5 repo location
-model_path = '/mnt/src/Springboard/best.pt'  # Adjust to the path where best.pt is located in the repo
+# Paths
+repo_path = ‘.’
+model_path = 'best.pt'
 
 # Load the YOLOv5 model
-@st.cache_resource
-def load_model(repo_path, model_path):
-    return torch.hub.load(repo_path, 'custom', path=model_path, source='local')
+model = torch.hub.load(repo_path, 'custom', path=model_path, source='local')
 
-model = load_model(repo_path, model_path)
+# Streamlit app UI
+st.title('Tennis Player Detection App')
+st.write('Upload a tennis video to detect players in real-time.')
 
-# Main app interface
-st.title("🎾 Tennis Tracking App")
+# File uploader for video input
+uploaded_video = st.file_uploader("Choose a video file...", type=["mp4", "avi", "mov"])
 
-# Upload video file
-uploaded_video = st.file_uploader("Upload a video", type=["mp4", "avi", "mov"])
+if uploaded_video is not None:
+    # Save the uploaded video to a temporary file
+    temp_video = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+    temp_video_path = temp_video.name
+    temp_video.write(uploaded_video.read())
+    temp_video.close()
 
-if uploaded_video:
-    # Save uploaded video to a temporary file
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_video:
-        temp_video.write(uploaded_video.read())
-        temp_video_path = temp_video.name
-
-    # Open the video for reading
+    # Open video capture
     cap = cv2.VideoCapture(temp_video_path)
-
-    # Prepare the output video
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_output:
-        output_video_path = temp_output.name
-
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    progress_bar = st.progress(0)
-
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
-
     stframe = st.empty()
-    frame_count = 0
 
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
 
-        # Run detection
+        # Perform detection
         results = model(frame)
-        processed_frame = np.squeeze(results.render())
+        frame = np.squeeze(results.render())  # Draw the detection boxes on the frame
 
-        # Write the processed frame to the output video
-        out.write(processed_frame)
+        # Convert BGR to RGB for display
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        # Display the processed frame
-        stframe.image(cv2.cvtColor(processed_frame, cv2.COLOR_BGR2RGB), channels="RGB")
+        # Display the frame in Streamlit
+        stframe.image(frame, channels='RGB', use_column_width=True)
 
-        # Update progress bar
-        frame_count += 1
-        progress_bar.progress(frame_count / total_frames)
+        # Limit frame rate
+        time.sleep(0.03)
 
-    # Release video resources
     cap.release()
-    out.release()
+    st.success('Video processing complete!')
 
-    # Add download button
-    with open(output_video_path, 'rb') as file:
-        st.download_button(
-            label="Download Processed Video",
-            data=file,
-            file_name="processed_tennis_video.mp4",
-            mime="video/mp4"
-        )
+    # Cleanup
+    os.unlink(temp_video_path)
 
-    # Clean up temporary files
-    os.remove(temp_video_path)
-    os.remove(output_video_path)
+st.write("Ensure 'best.pt' is in the same directory or provide the correct path in ⁠model_path⁠.")
