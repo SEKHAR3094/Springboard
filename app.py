@@ -1,126 +1,57 @@
 import streamlit as st
-import cv2
 import torch
+import cv2
 import tempfile
-from pathlib import Path
+import numpy as np
+import os
 
-# Load YOLOv5 model from the local yolov5 folder in the repository
-model = torch.hub.load('yolov5', 'custom', path='yolov5/best.pt', source='local')
+# Paths
+repo_path = './yolov5'
+model_path = 'best.pt'
 
-# Streamlit page configuration
-st.set_page_config(page_title="Tennis Game Tracking", layout="centered")
+# Load the YOLOv5 model
+model = torch.hub.load(repo_path, 'custom', path=model_path, source='local')
 
-# Title of the application
-st.title("Tennis Game Tracking")
+# Streamlit app UI
+st.title('Tennis Player Detection App')
+st.write('Upload a tennis video to detect players in real-time.')
 
-# Initialize flags and file paths
-if 'output_path' not in st.session_state:
-    st.session_state.output_path = None
-if 'input_file_name' not in st.session_state:
-    st.session_state.input_file_name = None
-if 'show_input_video' not in st.session_state:
-    st.session_state.show_input_video = False
-if 'show_output_video' not in st.session_state:
-    st.session_state.show_output_video = False
+# File uploader for video input
+uploaded_video = st.file_uploader("Choose a video file...", type=["mp4", "avi", "mov"])
 
-# Layout setup: video display area on the left, buttons on the right
-col1, col2 = st.columns([10, 7])
+if uploaded_video is not None:
+    # Save the uploaded video to a temporary file
+    temp_video = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+    temp_video_path = temp_video.name
+    temp_video.write(uploaded_video.read())
+    temp_video.close()
 
-# File uploader and buttons on the right side
-with col2:
-    # File uploader for selecting input file
-    input_file = st.file_uploader("Select Input File", type=["mp4", "mov", "avi"])
+    # Open video capture
+    cap = cv2.VideoCapture(temp_video_path)
+    stframe = st.empty()
 
-    # Set input file name if a file is uploaded
-    if input_file:
-        st.session_state.input_file_name = Path(input_file.name).stem  # Extract the file name without extension
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
 
-    # Preview button
-    if st.button("Preview Video"):
-        if input_file:
-            st.session_state.show_input_video = True
-        else:
-            st.warning("Please select a video file to preview.")
+        # Perform detection
+        results = model(frame)
+        frame = np.squeeze(results.render())  # Draw the detection boxes on the frame
 
-    # Process Video button
-    if st.button("Process Video"):
-        if input_file:
-            # Save the uploaded file temporarily
-            temp_input_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
-            with open(temp_input_path, "wb") as f:
-                f.write(input_file.read())
+        # Convert BGR to RGB for display
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-            # Open the input video
-            cap = cv2.VideoCapture(temp_input_path)
-            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            fps = cap.get(cv2.CAP_PROP_FPS)
-            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        # Display the frame in Streamlit
+        stframe.image(frame, channels='RGB', use_column_width=True)
 
-            # Create a temporary output path
-            st.session_state.output_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            out = cv2.VideoWriter(st.session_state.output_path, fourcc, fps, (width, height))
+        # Limit frame rate
+        time.sleep(0.03)
 
-            # Processing each frame
-            frame_num = 0
-            progress_bar = st.progress(0)
-            progress_label = st.empty()  # To display progress percentage
+    cap.release()
+    st.success('Video processing complete!')
 
-            while cap.isOpened():
-                ret, frame = cap.read()
-                if not ret:
-                    break
+    # Cleanup
+    os.unlink(temp_video_path)
 
-                # Perform inference on the frame using YOLOv5
-                results = model(frame)
-                processed_frame = results.render()[0]
-
-                # Write the processed frame to output
-                out.write(processed_frame)
-
-                # Update progress bar
-                frame_num += 1
-                progress_percentage = int((frame_num / total_frames) * 100)
-                progress_bar.progress(progress_percentage)
-                progress_label.text(f"Processing... {progress_percentage}% complete")
-
-            cap.release()
-            out.release()
-            st.success("Video processing complete!")
-            st.session_state.show_output_video = True  # Set to True to display output video
-
-        else:
-            st.warning("Please select a video file to process.")
-
-    # Show Output button
-    if st.button("Show Output"):
-        if st.session_state.output_path:
-            st.session_state.show_output_video = True
-        else:
-            st.warning("Please process the video before showing the output.")
-
-    # Download Output button
-    st.write("Download Output:")
-    if st.session_state.output_path and Path(st.session_state.output_path).exists():
-        with open(st.session_state.output_path, "rb") as f:
-            st.download_button(
-                label="Download Processed Video",
-                data=f,
-                file_name=f"{st.session_state.input_file_name}_output.mp4",
-                mime="video/mp4"
-            )
-    else:
-        st.warning("No processed video available. Please upload and process a video first.")
-
-# Video display area in the larger left column
-with col1:
-    # Show input video if it has been previewed
-    if st.session_state.show_input_video:
-        st.subheader("Input Video Preview:")
-        st.video(input_file)
-
-    # Show processed output video below the input video preview
-    if st.session_state.show_output_video and st.session_state.output_path:
-        st.subheader("Processed Output Video:")
-        st.video(st.session_state.output_path)  # Display the processed video
+st.write("Ensure 'best.pt' is in the same directory or provide the correct path in ⁠model_path⁠.")
