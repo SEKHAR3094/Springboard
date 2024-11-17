@@ -8,14 +8,16 @@ import os
 # Path to the YOLOv5 model in the repository
 model_path = "best.pt"
 
-# Load the YOLOv5 model
+# Load the YOLOv5 model with platform-agnostic handling
 @st.cache_resource
 def load_model(model_path):
+    # Ensure correct path for model loading
+    model_path = os.path.abspath(model_path)  # Get the absolute path to avoid issues with relative paths
     if not os.path.exists(model_path):
-        st.error("Model file not found. Please ensure 'best.pt' is in the application directory.")
+        st.error(f"Model file not found at {model_path}. Please ensure 'best.pt' is in the application directory.")
         st.stop()
-    # Directly load the model with torch.load instead of torch.hub
-    model = torch.load(model_path)
+    # Use torch.load for model loading
+    model = torch.load(model_path, map_location=torch.device('cpu'))  # Load model on CPU for compatibility
     model.eval()  # Ensure model is in evaluation mode
     return model
 
